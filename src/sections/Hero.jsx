@@ -4,7 +4,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 gsap.registerPlugin(ScrollTrigger)
 
-const HERO_VIDEO_SRC = '/ttps.mp4'
+const HERO_VIDEO_SRC = '/rrpsa.mp4'
 
 const Hero = ({ onHeroProgress }) => {
   const heroRef = useRef(null)
