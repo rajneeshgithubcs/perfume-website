@@ -34,10 +34,12 @@ const Hero = ({ onHeroProgress }) => {
     gsap.set(fgVideo, {
       // Keep the complete composition visible on phones, then use depth and
       // rotation—not a heavily cropped zoom—for the 3D entrance.
-      scale: isMobile ? 1.025 : 1.1,
-      rotationX: isMobile ? 1.5 : 3,
-      rotationY: isMobile ? -2.5 : -7,
-      rotationZ: isMobile ? -0.25 : -1,
+      // The desktop scale compensates for the perspective rotation so its
+      // edges never reveal the black hero background.
+      scale: isMobile ? 1.04 : 1.22,
+      rotationX: isMobile ? 1 : 1.5,
+      rotationY: isMobile ? -1.5 : -2.5,
+      rotationZ: isMobile ? -0.15 : -0.35,
       yPercent: isMobile ? 0.5 : 2,
       z: isMobile ? -20 : -50,
       transformPerspective: 1800,
