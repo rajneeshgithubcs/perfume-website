@@ -81,7 +81,7 @@ function App() {
               setCheckoutOpen(false)
             }}
           />
-        ) : <div className={showCollection ? 'hidden' : 'block'} style={{ display: showCollection ? 'none' : 'block' }}>
+        ) : !showCollection && <div>
             <Hero onHeroProgress={handleHeroProgress} />
             <ScentJourney />
             <Notes />

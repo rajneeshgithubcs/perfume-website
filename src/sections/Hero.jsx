@@ -28,7 +28,17 @@ const Hero = ({ onHeroProgress }) => {
     progressCallbackRef.current?.(0)
     const isMobile = window.matchMedia('(max-width: 767px)').matches
     gsap.set(textRef.current, { opacity: isMobile ? 1 : 0, y: isMobile ? 0 : 24 })
-    gsap.set(fgVideo, { transformOrigin: 'center center', force3D: true })
+    gsap.set(fgVideo, {
+      // A subtle starting perspective makes the scroll sequence feel dimensional
+      // without cropping the image too aggressively on narrow screens.
+      scale: isMobile ? 1.08 : 1.18,
+      rotationY: isMobile ? -3 : -9,
+      rotationZ: isMobile ? -0.4 : -1.5,
+      yPercent: isMobile ? 1 : 3,
+      transformPerspective: 1800,
+      transformOrigin: 'center center',
+      force3D: true,
+    })
 
     const seekState = { target: 0, seeking: false, frameId: 0, lastSeekAt: 0, disposed: false }
     const syncVideoFrame = () => {
@@ -43,7 +53,9 @@ const Hero = ({ onHeroProgress }) => {
 
       const maxTime = Math.max(fgVideo.duration - 0.05, 0)
       const nextTime = Math.min(Math.max(seekState.target, 0), maxTime)
-      if (Math.abs(nextTime - fgVideo.currentTime) <= 0.016) return
+      // Ignore tiny time deltas: on mobile they cause more decoder work than
+      // visible motion, resulting in a less smooth scroll.
+      if (Math.abs(nextTime - fgVideo.currentTime) <= 0.033) return
 
       seekState.seeking = true
       seekState.lastSeekAt = now
@@ -71,11 +83,11 @@ const Hero = ({ onHeroProgress }) => {
           scrollTrigger: {
             trigger: hero,
             start: 'top top',
-            end: '+=450%',
+            end: isMobile ? '+=280%' : '+=450%',
             pin: true,
             pinSpacing: true,
-            scrub: 0.6,
-            anticipatePin: 1,
+            scrub: isMobile ? 0.35 : 0.6,
+            anticipatePin: isMobile ? 0 : 1,
             invalidateOnRefresh: true,
             onUpdate: (self) => {
               seekState.target = self.progress * Math.max(fgVideo.duration - 0.05, 0)
@@ -128,7 +140,7 @@ const Hero = ({ onHeroProgress }) => {
   return (
     <section
       ref={heroRef}
-      className="relative w-full h-[100svh] min-h-[500px] bg-[#0a0a0a] overflow-hidden flex items-center justify-center"
+      className="relative flex h-[100svh] min-h-[500px] w-full items-center justify-center overflow-hidden bg-[#0a0a0a] [contain:paint]"
       style={{ perspective: '1800px' }}
     >
       <video
@@ -139,7 +151,7 @@ const Hero = ({ onHeroProgress }) => {
         preload="auto"
         disablePictureInPicture
         disableRemotePlayback
-        className="absolute inset-0 z-10 w-full h-full object-cover pointer-events-none select-none [will-change:transform] [backface-visibility:hidden]"
+        className="absolute inset-0 z-10 h-full w-full select-none object-cover pointer-events-none [backface-visibility:hidden] [will-change:transform]"
       />
 
       {/* BRAND TITLE */}
