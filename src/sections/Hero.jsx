@@ -22,59 +22,28 @@ const Hero = ({ onHeroProgress }) => {
     
     if (!fgVideo || !hero) return
 
-    // Force video settings
+    // Let the browser's video decoder play continuously. Seeking a compressed
+    // video for every scroll event forces keyframe decoding and is the source
+    // of the visible stutter, especially on touch devices.
     fgVideo.muted = true
     fgVideo.playsInline = true
+    fgVideo.play().catch(() => {})
     progressCallbackRef.current?.(0)
     const isMobile = window.matchMedia('(max-width: 767px)').matches
     gsap.set(textRef.current, { opacity: isMobile ? 1 : 0, y: isMobile ? 0 : 24 })
     gsap.set(fgVideo, {
-      // A subtle starting perspective makes the scroll sequence feel dimensional
-      // without cropping the image too aggressively on narrow screens.
-      scale: isMobile ? 1.08 : 1.18,
-      rotationY: isMobile ? -3 : -9,
-      rotationZ: isMobile ? -0.4 : -1.5,
-      yPercent: isMobile ? 1 : 3,
+      // Keep the complete composition visible on phones, then use depth and
+      // rotation—not a heavily cropped zoom—for the 3D entrance.
+      scale: isMobile ? 1.025 : 1.1,
+      rotationX: isMobile ? 1.5 : 3,
+      rotationY: isMobile ? -2.5 : -7,
+      rotationZ: isMobile ? -0.25 : -1,
+      yPercent: isMobile ? 0.5 : 2,
+      z: isMobile ? -20 : -50,
       transformPerspective: 1800,
       transformOrigin: 'center center',
       force3D: true,
     })
-
-    const seekState = { target: 0, seeking: false, frameId: 0, lastSeekAt: 0, disposed: false }
-    const syncVideoFrame = () => {
-      seekState.frameId = 0
-      if (seekState.disposed || seekState.seeking || fgVideo.readyState < 2 || !Number.isFinite(fgVideo.duration) || fgVideo.duration <= 0) return
-
-      const now = performance.now()
-      if (now - seekState.lastSeekAt < 40) {
-        seekState.frameId = requestAnimationFrame(syncVideoFrame)
-        return
-      }
-
-      const maxTime = Math.max(fgVideo.duration - 0.05, 0)
-      const nextTime = Math.min(Math.max(seekState.target, 0), maxTime)
-      // Ignore tiny time deltas: on mobile they cause more decoder work than
-      // visible motion, resulting in a less smooth scroll.
-      if (Math.abs(nextTime - fgVideo.currentTime) <= 0.033) return
-
-      seekState.seeking = true
-      seekState.lastSeekAt = now
-      try {
-        fgVideo.currentTime = nextTime
-      } catch {
-        seekState.seeking = false
-      }
-    }
-    const queueVideoFrame = () => {
-      if (!seekState.frameId && !seekState.disposed) {
-        seekState.frameId = requestAnimationFrame(syncVideoFrame)
-      }
-    }
-    const handleSeeked = () => {
-      seekState.seeking = false
-      queueVideoFrame()
-    }
-    fgVideo.addEventListener('seeked', handleSeeked)
 
     let gsapCtx
     const initScroll = () => {
@@ -83,15 +52,15 @@ const Hero = ({ onHeroProgress }) => {
           scrollTrigger: {
             trigger: hero,
             start: 'top top',
-            end: isMobile ? '+=280%' : '+=450%',
+            end: isMobile ? '+=160%' : '+=230%',
             pin: true,
             pinSpacing: true,
-            scrub: isMobile ? 0.35 : 0.6,
+            // Direct scrub removes the delayed "catch-up" feeling while the
+            // transform itself remains GPU-composited.
+            scrub: true,
             anticipatePin: isMobile ? 0 : 1,
             invalidateOnRefresh: true,
             onUpdate: (self) => {
-              seekState.target = self.progress * Math.max(fgVideo.duration - 0.05, 0)
-              queueVideoFrame()
               progressCallbackRef.current?.(self.progress)
             }
           }
@@ -101,10 +70,12 @@ const Hero = ({ onHeroProgress }) => {
           fgVideo,
           {
             scale: 1,
+            rotationX: 0,
             rotationY: 0,
             rotationZ: 0,
             xPercent: 0,
             yPercent: 0,
+            z: 0,
             duration: 1,
             ease: 'none',
           },
@@ -118,20 +89,9 @@ const Hero = ({ onHeroProgress }) => {
       }, hero)
     }
 
-    // Initialize once metadata is loaded
-    const metadataHandler = () => initScroll()
-
-    if (fgVideo.readyState >= 1) {
-      initScroll()
-    } else {
-      fgVideo.addEventListener('loadedmetadata', metadataHandler, { once: true })
-    }
+    initScroll()
 
     return () => {
-      fgVideo.removeEventListener('loadedmetadata', metadataHandler)
-      fgVideo.removeEventListener('seeked', handleSeeked)
-      seekState.disposed = true
-      if (seekState.frameId) cancelAnimationFrame(seekState.frameId)
       fgVideo.pause()
       if (gsapCtx) gsapCtx.revert()
     }
@@ -140,18 +100,20 @@ const Hero = ({ onHeroProgress }) => {
   return (
     <section
       ref={heroRef}
-      className="relative flex h-[100svh] min-h-[500px] w-full items-center justify-center overflow-hidden bg-[#0a0a0a] [contain:paint]"
+      className="relative flex h-[100svh] min-h-[520px] w-full items-center justify-center overflow-hidden bg-[#0a0a0a] [contain:paint] sm:min-h-[500px]"
       style={{ perspective: '1800px' }}
     >
       <video
         ref={fgVideoRef}
         src={HERO_VIDEO_SRC}
+        autoPlay
+        loop
         playsInline
         muted
         preload="auto"
         disablePictureInPicture
         disableRemotePlayback
-        className="absolute inset-0 z-10 h-full w-full select-none object-cover pointer-events-none [backface-visibility:hidden] [will-change:transform]"
+        className="absolute inset-0 z-10 h-full w-full select-none object-cover object-center pointer-events-none [backface-visibility:hidden] [will-change:transform]"
       />
 
       {/* BRAND TITLE */}
@@ -161,7 +123,7 @@ const Hero = ({ onHeroProgress }) => {
           className="space-y-2 pointer-events-auto w-full max-w-lg mx-auto sm:mx-0 drop-shadow-[0_3px_14px_rgba(0,0,0,0.9)]"
         >
           <h1
-            className="text-[clamp(1.9rem,9vw,3rem)] sm:text-5xl md:text-6xl font-light tracking-[0.12em] sm:tracking-[0.18em] text-white uppercase leading-[1.1] break-words"
+            className="text-[clamp(1.55rem,7.5vw,2.35rem)] sm:text-5xl md:text-6xl font-light tracking-[0.1em] sm:tracking-[0.18em] text-white uppercase leading-[1.1] break-words"
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
           >
             LUCKY TENDER
