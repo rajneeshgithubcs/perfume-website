@@ -60,6 +60,7 @@ function App() {
           onHome={(event) => {
             event.preventDefault()
             setShowCollection(false)
+            setCheckoutOpen(false)
             window.history.pushState({}, '', window.location.pathname)
             window.scrollTo(0, 0)
           }}

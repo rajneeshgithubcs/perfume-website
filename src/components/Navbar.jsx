@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useFragranceStore } from '../store/fragranceStore'
 
 const Navbar = ({ heroComplete = false, onShop, onHome, onCart }) => {
@@ -94,9 +94,20 @@ const Navbar = ({ heroComplete = false, onShop, onHome, onCart }) => {
               <line x1="3" y1="6" x2="21" y2="6" />
             </svg>
 
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-200 text-[#171411] text-[9px] font-bold rounded-full flex items-center justify-center font-mono">
-              {cartCount}
-            </span>
+            <AnimatePresence>
+              {cartCount > 0 && (
+                <motion.span
+                  key={cartCount}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                  className="absolute -top-1 -right-1 w-4 h-4 bg-amber-200 text-[#171411] text-[9px] font-bold rounded-full flex items-center justify-center font-mono"
+                >
+                  {cartCount}
+                </motion.span>
+              )}
+            </AnimatePresence>
           </motion.button>
         </div>
       </div>
